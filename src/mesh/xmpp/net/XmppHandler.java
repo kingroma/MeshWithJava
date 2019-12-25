@@ -26,7 +26,7 @@ public class XmppHandler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf inBuffer = (ByteBuf) msg;
         String message = inBuffer.toString(CharsetUtil.UTF_8);
-        
+        inBuffer.clear();
         System.out.println("receive: " + message);
 
         xmppClientController.onMessage(message);
