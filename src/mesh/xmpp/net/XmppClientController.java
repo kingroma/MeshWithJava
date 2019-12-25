@@ -1,8 +1,7 @@
 package mesh.xmpp.net;
 
-import java.util.Map;
-
 import org.jivesoftware.smack.util.Base64;
+import org.redisson.api.RTopic;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -11,12 +10,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.CharsetUtil;
 import mesh.generic.GenericClientController;
-import mesh.redis.RedisClientControllerSubscribe;
-import mesh.redis.RedisConnection;
+import mesh.redis.RedissonClientControllerSubscribe;
+import mesh.redis.RedissonConnection;
 import mesh.xmpp.packet.XmppXmlParser;
 import mesh.xmpp.packet.XmppXmlTemplate;
 import mesh.xmpp.packet.XmppXmlType;
-import redis.clients.jedis.Jedis;
 
 // receive: <?xml version="1.0"?><stream:stream to="stbxmpps.voo.be" xml:lang="en" version="1.0" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
 // send: <stream:stream xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0" id="4f5c64eb5cbe1f3ad9fcc59b8d5c1d7b" from="stbxmpps.voo.be">
@@ -31,18 +29,18 @@ public class XmppClientController implements GenericClientController {
 	
 	private XmppClientInformation xmppClientInformation = new XmppClientInformation();
 	
-	private Jedis redis = RedisConnection.getJedis();
+	// private Jedis redis = RedisConnection.getJedis();
 	
 	private String pubsubPrefix = "messages:";
 	
-	private RedisClientControllerSubscribe rccs = null ; 
+	private RedissonClientControllerSubscribe rccs = null ; 
 	
 	public XmppClientController(ChannelHandlerContext ctx) { 
 		this.ctx = ctx ; 
 	}
 	
 	public void onClose() {
-		System.out.println("onClose");
+		// System.out.println("onClose");
 		if ( rccs != null ) {
 			rccs.close();
 		}
@@ -226,7 +224,7 @@ public class XmppClientController implements GenericClientController {
 	
 	// ctx.write(Unpooled.copiedBuffer("Hello " + message, CharsetUtil.UTF_8));
 	private void send(String message){
-		System.out.println("send : " + message);
+		// System.out.println("send : " + message);
 		message += "\n\n";
 		ctx.writeAndFlush(Unpooled.copiedBuffer(message, CharsetUtil.UTF_8));
 	}
@@ -235,28 +233,30 @@ public class XmppClientController implements GenericClientController {
 	private void clientRedisStarter() {
 		String username = xmppClientInformation.getUsername();
 		
-		rccs = new RedisClientControllerSubscribe(this,pubsubPrefix + username);
-		rccs.start();
+		rccs = new RedissonClientControllerSubscribe(this,pubsubPrefix + username);
+		rccs.run();
 		
 	}
 	
-	private boolean checkOnline(String username) {
-		boolean ret = false ; 
-		Map<String,String> map = redis.pubsubNumSub(pubsubPrefix + username);
-		String value = map.get(pubsubPrefix + username);
-		
-		try {
-			int count = Integer.parseInt(value);
-			if ( count > 0 ) {
-				ret = true ; 
-			}
-		} catch (Exception e) {	}
-		
-		return ret ; 
-	}
+//	private boolean checkOnline(String username) {
+//		boolean ret = false ; 
+//		Map<String,String> map = redis.pubsubNumSub(pubsubPrefix + username);
+//		String value = map.get(pubsubPrefix + username);
+//		
+//		try {
+//			int count = Integer.parseInt(value);
+//			if ( count > 0 ) {
+//				ret = true ; 
+//			}
+//		} catch (Exception e) {	}
+//		
+//		return ret ; 
+//	}
 	
 	public void doPublish(String username , String message) {
-		redis.publish(pubsubPrefix + username, message);
+		// redis.publish(pubsubPrefix + username, message);
+		RTopic<String> topic = RedissonConnection.getRedisson().getTopic(pubsubPrefix + username);
+		topic.publish(message);
 	}
 	
 	@Override

@@ -23,6 +23,7 @@ public class RedisClientControllerSubscribe extends Thread {
 	@Override
 	public void run() {
 		jedis = RedisConnection.getJedis();
+		
 		pubsub = new JedisPubSub() {
         	@Override
         	public void onMessage(String channel, String message) {
@@ -30,13 +31,20 @@ public class RedisClientControllerSubscribe extends Thread {
         	}
 		};
         
+		
+		
 		jedis.subscribe(pubsub, key);
+		
 	}
 	
 	public void close() {
 		System.out.println("thread close");
-		pubsub.unsubscribe();
-		jedis.close();
+		if ( pubsub != null ) {
+			pubsub.unsubscribe();
+		}
+		if ( jedis != null ) {
+			jedis.close();
+		}
 		System.out.println("thread close succ");
 	}
 	
